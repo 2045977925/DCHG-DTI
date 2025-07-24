@@ -1,7 +1,7 @@
 # **DCHG-DTI**
-## This repository contains the code for paper: Prediction of Drug-Target Interactions Based on Dual-Channel Heterogeneous Graph Neural Networks
+ This repository contains the code for paper: Prediction of Drug-Target Interactions Based on Dual-Channel Heterogeneous Graph Neural Networks
 ![DCHG_Framework](https://github.com/user-attachments/assets/1d3c1a63-3391-4cad-86e7-ce4ca77af628)
-## Figure 1. The DCHG-DTI prediction framework is divided into four parts: (A) Different feature extraction modules are used to extract local features of drugs and targets. (B) A heterogeneous graph neural network is constructed based on the local features, and a relation-aware graph convolutional network is employed to extract global features. (C) The MHBA feature fusion module is utilized to fuse the features obtained from (B). (D) The fused feature representations of drugs and proteins are used to predict potential DTIs.
+ Figure 1. The DCHG-DTI prediction framework is divided into four parts: (A) Different feature extraction modules are used to extract local features of drugs and targets. (B) A heterogeneous graph neural network is constructed based on the local features, and a relation-aware graph convolutional network is employed to extract global features. (C) The MHBA feature fusion module is utilized to fuse the features obtained from (B). (D) The fused feature representations of drugs and proteins are used to predict potential DTIs.
 # **How to run**
 ## *Step 1: Data Preprocessing*
 Run the dataprocess.py script to prepare the one-dimensional embeddings and two-dimensional graph data for drugs and proteins across different channels. This step ensures that your data is properly processed for subsequent local feature extraction.
