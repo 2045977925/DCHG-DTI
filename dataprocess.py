@@ -455,6 +455,10 @@ def create_adjacency_matrices(input_folder, uniprot_mapping_file, output_csv):
     print(f"邻接矩阵已保存到文件：{output_csv}")
 
 if __name__ == '__main__':
+    # 创建文件夹
+    create_folder('PDB_3D_info')  # 保存下载的PDB文件
+    create_folder('Protein_Contact_Maps')  # 保存蛋白质接触图文件
+
     # 通道B药物分子图生成
     # sdf提取信息
     sdf_file_paths = [
