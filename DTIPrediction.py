@@ -48,7 +48,7 @@ def plot_learning_curve(estimator, title, X, y, cv=None, n_jobs=None, train_size
 
 if __name__ == '__main__':
     # 读取原始数据，确保包含 'ID' 列，和特征列、标签列
-    train_df = pd.read_csv('GNN/Fusion_features_with_labels_RGCN.csv')
+    train_df = pd.read_csv('Fusion_features_with_labels_RGCN.csv')
 
     feature_columns = [str(i) for i in range(64)]  # 特征列名称，字符串类型
     id_column = 'ID'  # ID列名称
@@ -168,5 +168,3 @@ if __name__ == '__main__':
     test_results_sorted.to_csv('RGCN_test_predictions.csv', index=False)
     print("测试集预测结果已保存到 'RGCN_test_predictions.csv'.")
 
-    # 绘制学习曲线（可选）
-    plot_learning_curve(best_model, "XGBoost Learning Curve", np.vstack([X_train, X_test]), np.hstack([y_train, y_test]), cv=cv, n_jobs=-1)
