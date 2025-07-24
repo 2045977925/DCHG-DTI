@@ -88,9 +88,9 @@ def main():
         {
             "drug_features_file": "nodefeatures/drug_smiles_features.csv",
             "protein_features_file": "nodefeatures/protein_sequence_features.csv",
-            "drug_similarity_file": "heterodata/combined_drug_similarity_matrix.csv",
-            "protein_similarity_file": "heterodata/combined_protein_similarity_matrix.csv",
-            "interaction_file": "heterodata/drug_protein.csv",
+            "drug_similarity_file": "data/combined_drug_similarity_matrix.csv",
+            "protein_similarity_file": "data/combined_protein_similarity_matrix.csv",
+            "interaction_file": "data/drug_protein.csv",
             "drug_id_col": "Drug_ID",
             "protein_id_col": "Protein_ID",
             "features_col": "Features"
@@ -98,9 +98,9 @@ def main():
         {
             "drug_features_file": "nodefeatures/drug_graph_features.csv",
             "protein_features_file": "nodefeatures/protein_graph_features.csv",
-            "drug_similarity_file": "heterodata/combined_drug_similarity_matrix.csv",
-            "protein_similarity_file": "heterodata/combined_protein_similarity_matrix.csv",
-            "interaction_file": "heterodata/drug_protein.csv",
+            "drug_similarity_file": "data/combined_drug_similarity_matrix.csv",
+            "protein_similarity_file": "data/combined_protein_similarity_matrix.csv",
+            "interaction_file": "data/drug_protein.csv",
             "drug_id_col": "ID",
             "protein_id_col": "ID",
             "features_col": "Graph_Features"
@@ -139,11 +139,11 @@ def main():
         (drug_ids, drug_features), (protein_ids, protein_features) = separate_features_by_type(output, index_to_node)
 
         if channel["features_col"] == "Features":
-            save_features_to_csv(drug_ids, drug_features, f'GNN/Drug_SMILES_Features_RGCN_{channel["features_col"]}.csv')
-            save_features_to_csv(protein_ids, protein_features, f'GNN/Protein_Sequence_Features_RGCN_{channel["features_col"]}.csv')
+            save_features_to_csv(drug_ids, drug_features, f'Drug_SMILES_Features_RGCN_{channel["features_col"]}.csv')
+            save_features_to_csv(protein_ids, protein_features, f'Protein_Sequence_Features_RGCN_{channel["features_col"]}.csv')
         elif channel["features_col"] == "Graph_Features":
-            save_features_to_csv(drug_ids, drug_features, f'GNN/Drug_Graph_Features_RGCN_{channel["features_col"]}.csv')
-            save_features_to_csv(protein_ids, protein_features, f'GNN/Protein_Graph_Features_RGCN_{channel["features_col"]}.csv')
+            save_features_to_csv(drug_ids, drug_features, f'Drug_Graph_Features_RGCN_{channel["features_col"]}.csv')
+            save_features_to_csv(protein_ids, protein_features, f'Protein_Graph_Features_RGCN_{channel["features_col"]}.csv')
 
         if drug_features:
             print("Drug Features Shape:", len(drug_features), drug_features[0].shape)
