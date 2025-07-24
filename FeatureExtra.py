@@ -1,3 +1,4 @@
+import os
 import pandas as pd
 import torch
 from torch_geometric.data import Data
@@ -18,26 +19,26 @@ class Conv1d(nn.Module):
         self.conv2 = nn.Conv1d(channel, channel, kernel_size, padding=1)
         self.conv3 = nn.Conv1d(channel, channel, kernel_size, padding=1)
         self.relu = nn.ReLU()
-        self.dropout = nn.Dropout(0.5)  # 添加 Dropout
+        self.dropout = nn.Dropout(0.5)  
         self.globalmaxpool = nn.AdaptiveMaxPool1d(1)
-        self.globalavgpool = nn.AdaptiveAvgPool1d(1)  # 添加全局平均池化
+        self.globalavgpool = nn.AdaptiveAvgPool1d(1)  
 
     def forward(self, x):
         x = x.permute(0, 2, 1)
         x = self.conv1(x)
         x = self.relu(x)
-        x = self.dropout(x)  # Dropout
+        x = self.dropout(x)
         x = self.conv2(x)
         x = self.relu(x)
-        x = self.dropout(x)  # Dropout
+        x = self.dropout(x) 
         x = self.conv3(x)
         x = self.relu(x)
-        x = self.dropout(x)  # Dropout
+        x = self.dropout(x)
 
         # 使用全局最大池化和全局平均池化
         max_features = self.globalmaxpool(x)
         avg_features = self.globalavgpool(x)
-        x = max_features + avg_features  # 简单相加特征
+        x = max_features + avg_features 
         x = x.squeeze(-1)
         return x
 
@@ -46,8 +47,7 @@ def extract_features(embeddings, cnn_model):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     cnn_model.to(device)
     embeddings = embeddings.to(device)
-    # 确保嵌入是3D张量
-    embeddings = embeddings.unsqueeze(1)  # 添加一个额外的维度
+    embeddings = embeddings.unsqueeze(1) 
     print(f"Embeddings shape before CNN: {embeddings.shape}")
     features = cnn_model(embeddings)
     print(f"Features shape after CNN: {features.shape}")
@@ -93,19 +93,14 @@ def load_drug_graph_from_csv(csv_file_path):
 def load_protein_graph_from_csv(csv_file_path):
     graphs = []
 
-    for chunk in pd.read_csv(csv_file_path, chunksize=1):  # 每批只处理一个图
+    for chunk in pd.read_csv(csv_file_path, chunksize=1): 
         for index, row in chunk.iterrows():
             protein_id = row['Protein_ID']
             adjacency_matrix_str = row['Adjacency_Matrix']
 
             try:
-                # 使用 `ast.literal_eval` 来安全地解析字符串为列表
                 adjacency_matrix_list = ast.literal_eval(adjacency_matrix_str)
-
-                # 将解析后的列表转换为NumPy数组
                 adjacency_matrix = np.array(adjacency_matrix_list, dtype=float)
-
-                # 检查是否是方阵
                 if adjacency_matrix.shape[0] != adjacency_matrix.shape[1]:
                     print(f"Protein {protein_id} does not form a perfect square matrix, skipping.")
                     continue
@@ -145,7 +140,6 @@ def load_protein_graph_from_csv_for_error_processing_protein(csv_file_path, targ
                     print(f"Protein {protein_id} does not form a perfect square matrix, skipping.")
                     continue
 
-                # 使用稀疏矩阵表示
                 edge_index = np.array(np.where(adjacency_matrix > 0))
                 node_count = adjacency_matrix.shape[0]
                 node_features = np.eye(node_count, dtype=float)
@@ -174,7 +168,7 @@ def extract_graph_features(graphs, hidden_dim, output_dim):
                 features = model(graph)
                 graph_feature = features.mean(dim=0)
                 results.append((entity_id, graph_feature.numpy().tolist()))
-                torch.cuda.empty_cache()  # 清理缓存
+                torch.cuda.empty_cache()  
             except RuntimeError as e:
                 print(f"Error processing graph {entity_id}: {e}")
                 continue
@@ -182,16 +176,20 @@ def extract_graph_features(graphs, hidden_dim, output_dim):
     return results
 
 def process_graph_features(csv_file, output_file, graph_type, hidden_dim, output_dim):
+    if graph_type not in ['protein', 'drug']:
+        raise ValueError("Invalid graph_type! Must be 'protein' or 'drug'.")
+
+    # 根据图类型加载相应的图
     if graph_type == 'protein':
         graphs = load_protein_graph_from_csv(csv_file)
-    else:
-        raise ValueError("Invalid graph_type! Must be 'protein'.")
+    elif graph_type == 'drug':
+        graphs = load_drug_graph_from_csv(csv_file)
 
     features = extract_graph_features(graphs, hidden_dim, output_dim)
     df = pd.DataFrame(features, columns=['ID', 'Graph_Features'])
     df.to_csv(output_file, index=False)
     print(f"{graph_type.capitalize()} features extracted and saved to {output_file}")
-
+    
 # 对error processing protein的特征提取
 def extract_graph_features_for_error_processing_protein(graphs, hidden_dim, output_dim):
     results = []
@@ -216,10 +214,13 @@ def extract_graph_features_for_error_processing_protein(graphs, hidden_dim, outp
     return results
 
 if __name__ == '__main__':
+    # 创建文件夹
+    os.makedirs('nodefeatures', exist_ok=True)
+    
     # 通道A特征提取
     # 文件路径
-    protein_file = 'datainput/protein_sequence.csv'
-    drug_file = 'datainput/drug_smiles.csv'
+    protein_file = 'data/protein_sequence.csv'
+    drug_file = 'data/drug_smiles.csv'
     # 读取药物和蛋白质的嵌入
     drugs, proteins, drug_embeddings, protein_embeddings = prepare_embeddings(drug_file, protein_file)
     # 定义CNN模型
@@ -243,16 +244,16 @@ if __name__ == '__main__':
     # 通道B特征提取
     # 药物特征提取
     process_graph_features(
-        'graphdata/drugs/drug_graph.csv',
+        'data/drug_graph.csv',
         'nodefeatures/drug_graph_features.csv',
-        'drug',
+        'drug', 
         hidden_dim=32,
         output_dim=64
     )
 
     # 蛋白质特征提取
     process_graph_features(
-        'graphdata/proteins/protein_graph.csv',
+        'data/protein_graph.csv',
         'nodefeatures/protein_graph_features.csv',
         'protein',
         hidden_dim=32,
