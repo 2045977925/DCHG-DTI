@@ -1,15 +1,15 @@
 import os
 import csv
 import requests
-import rarfile
-import pandas as pd
 import torch
 import torch.nn as nn
 import numpy as np
+import pandas as pd
 from rdkit import Chem
 import ast
 from sklearn.preprocessing import OneHotEncoder
 from Bio.PDB import PDBParser, MMCIFParser, NeighborSearch, Polypeptide
+import matplotlib.pyplot as plt
 from tqdm import tqdm
 
 # 通道A数据预处理
@@ -20,6 +20,10 @@ SMI_NGRAM = 3
 PRT_NGRAM = 3
 EMBEDDING_DIM = 128  # 嵌入的维度
 
+# 创建文件夹，如果不存在则创建
+def create_folder(folder_path):
+    if not os.path.exists(folder_path):
+        os.makedirs(folder_path)
 # 读取文件
 def read_files(protein_file, drug_file):
     proteins = pd.read_csv(protein_file, usecols=['Protein_ID', 'Sequence'])
@@ -55,6 +59,7 @@ def convert_to_ngram_input(sequences, ngram_dict, max_len, ngram):
         # 如果原始 n-gram 序列超过 max_len，则进行截断
         if ngram_count > max_len:
             print(f"Warning: Sequence at index {i} exceeds max_len and is truncated.")
+        # 如果原始 n-gram 序列不足 max_len，数组已经自动填充为0，无需额外处理
 
     return ngram_input
 
@@ -82,19 +87,6 @@ def prepare_embeddings(drug_file, protein_file):
     return drugs, proteins, drug_embeddings, protein_embeddings
 
 # 通道B数据预处理
-# 解压缩RAR文件，并返回解压后的文件路径
-def extract_rar(rar_file_path):
-    extract_folder = os.path.splitext(rar_file_path)[0]  
-    os.makedirs(extract_folder, exist_ok=True)
-
-    with rarfile.RarFile(rar_file_path) as rf:
-        rf.extractall(path=extract_folder)
-    
-    print(f"成功解压缩 {rar_file_path} 到 {extract_folder}")
-    
-    # 返回解压后的SDF文件路径
-    return [os.path.join(extract_folder, file) for file in os.listdir(extract_folder) if file.endswith('.sdf')]
-
 # 从sdf文件中提取构建药物分子图的相关信息
 def extract_sdf_info(sdf_file_paths):
     for sdf_file_path in sdf_file_paths:
@@ -288,8 +280,8 @@ def check_atom_features_dimensions(csv_file_path):
         # 打印药物的 DRUGBANK_ID 和对应的维度
         print(f"Drug ID: {drug_id}, Atom_Features Dimensions: {num_rows}x{num_cols}")
 
-# 下载PDB或CIF文件
-def download_pdb_file(pdb_id, file_format='pdb', output_folder='data/PDB_3D_info'):
+# 下载PDB文件
+def download_pdb_file(pdb_id, file_format='pdb', output_folder='PDB_3D_info'):
     base_url = 'https://files.rcsb.org/download/'
     url = f'{base_url}{pdb_id}.{file_format}'
     response = requests.get(url)
@@ -299,23 +291,23 @@ def download_pdb_file(pdb_id, file_format='pdb', output_folder='data/PDB_3D_info
         with open(file_path, 'wb') as file:
             file.write(response.content)
         print(f'{pdb_id}.{file_format} 下载成功，保存至 {file_path}')
+        return True
     else:
         print(f'下载失败，状态码：{response.status_code}')
+        return False
 
-# 从CSV文件下载PDB或CIF文件
-def download_pdbs_from_csv(csv_file_path, output_folder, file_format='pdb', max_count=5):
+# 从CSV文件下载PDB文件
+def download_pdbs_from_csv(csv_file_path='data/3D_PDBName.csv', output_folder='PDB_3D_info'):
     with open(csv_file_path, mode='r') as file:
         reader = csv.reader(file)
         next(reader)  # 跳过标题行
-        count = 0
         for row in reader:
             pdb_id = row[0]  # 假设文件名在第一列
-            download_pdb_file(pdb_id, file_format=file_format, output_folder=output_folder)
-            count += 1
-            if count >= max_count:  # 只下载前 max_count 个
-                break
-    print("下载完成。")
-    
+            # 尝试下载PDB文件，如果失败则下载CIF文件
+            if not download_pdb_file(pdb_id, file_format='pdb', output_folder=output_folder):
+                download_pdb_file(pdb_id, file_format='cif', output_folder=output_folder)
+    print("所有文件下载完成。")
+
 # 获取蛋白质的三维结构文件
 def get_parser(file_path):
     if file_path.endswith(".pdb"):
@@ -464,24 +456,19 @@ def create_adjacency_matrices(input_folder, uniprot_mapping_file, output_csv):
 
 if __name__ == '__main__':
     # 通道B药物分子图生成
-    # 解压缩RAR文件并获取SDF文件路径
-    rar_file_path = 'graphdata/drugs/3D_structures.rar'  # 修改为你的RAR文件路径
-    sdf_file_paths = extract_rar(rar_file_path)
-
-    # 从解压后的文件中提取信息
+    # sdf提取信息
     sdf_file_paths = [
         'data/3D_structures.sdf',  # SDF 文件路径
         'data/approved_drugs.sdf'  # SDF 文件路径
     ]
     extract_sdf_info(sdf_file_paths)
-
+    
     # 合并
     smiles_file_path = 'data/drug_atoms_edges_in_3D_structures.csv'
     atoms_edges_file_path = 'data/drug_atoms_edges_in_approved_drugs.csv'
     output_file_path = 'data/merged_drug_atoms_edges.csv'  # 输出合并后的文件路径
-    # 调用函数合并CSV文件
     merge_csv_files(smiles_file_path, atoms_edges_file_path, output_file_path)
-
+    
     # 提取
     smiles_file_path = 'data/drug_smiles.csv'  # drug_smiles.csv的路径
     merged_file_path = 'data/merged_drug_atoms_edges.csv'  # merged_drug_atoms_edges.csv的路径
@@ -491,13 +478,11 @@ if __name__ == '__main__':
     # 构建药物分子图
     input_file_path = 'data/drug_graph_data.csv'  # 输入文件路径
     output_file_path = 'data/drug_graph.csv'  # 输出文件路径
-    # 调用函数构建药物分子图
     construct_drug_graph(input_file_path, output_file_path)
 
     # 通道B构建蛋白质残基接触图
     # 计算残基接触图
-    calculate_protein_contact_maps('data/PDB_3D_info', 'data/Protein_Contact_Maps', ca_distance_threshold=8.0,
+    calculate_protein_contact_maps('PDB_3D_info', 'Protein_Contact_Maps', ca_distance_threshold=8.0,
                                    ligand_distance_threshold=5.0)
+    create_adjacency_matrices('Protein_Contact_Maps', 'data/Uniprot_PDB.csv', 'data/protein_graph.csv')
 
-    # 残基接触图转换为邻接矩阵
-    create_adjacency_matrices('data/Protein_Contact_Maps', 'data/Uniprot_PDB.csv', 'data/protein_graph.csv')
