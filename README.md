@@ -13,6 +13,7 @@ conda env create -f environment.yml
 conda activate DCHGDTI
 # **How to run**
 ## *Step 1: Data Preprocessing*
+Unzip 3D_structures.rar in the data folder to obtain the 3D_structures.sdf file, and unzip combined_protein_similarity_matrix.rar to obtain the combined_protein_similarity_matrix.csv file. This will facilitate the execution of subsequent code.
 Run the dataprocess.py script to prepare the one-dimensional embeddings and two-dimensional graph data for drugs and proteins across different channels. This step ensures that your data is properly processed for subsequent local feature extraction.
 ## *Step 2: Subsequent Local Feature Extraction*
 Run the FeatureExtra.py script to extract local features of drugs and proteins in different channels respectively, which will be used for constructing the heterogeneous graph neural network.
