@@ -11,7 +11,7 @@ class MultiHeadBilinearAttention(nn.Module):
         super(MultiHeadBilinearAttention, self).__init__()
         self.num_heads = num_heads
         self.head_dim = input_dim // num_heads
-        assert input_dim % num_heads == 0, "输入维度必须能够被注意力头的数量整除"
+        assert input_dim % num_heads == 0,
 
         self.bilinear_heads = nn.ModuleList([
             nn.Bilinear(self.head_dim, self.head_dim, 1) for _ in range(num_heads)
@@ -43,8 +43,8 @@ class MultiHeadBilinearAttention(nn.Module):
 
 def parse_features(feature_string):
     # 将字符串转换为合法的列表格式
-    feature_string = feature_string.replace('[', '').replace(']', '')  # 去掉方括号
-    feature_list = [float(x.strip().rstrip(',')) for x in feature_string.split() if x.strip()]  # 去掉逗号并转换为浮点数
+    feature_string = feature_string.replace('[', '').replace(']', '') 
+    feature_list = [float(x.strip().rstrip(',')) for x in feature_string.split() if x.strip()]  
     return np.array(feature_list)
 
 
@@ -214,136 +214,23 @@ def dif_feature_fusion_one_channel(drug_fusion_file, protein_fusion_file, intera
     print(f"Fused features saved to '{output_file}'.")
 
 
-def dif_feature_fusion(drug_fusion_file, protein_fusion_file, interaction_file,
-                   output_file, input_dim, num_heads=4):
-    # 读取药物特征文件，假设格式为：ID, Features
-    drug_features_df = pd.read_csv(drug_fusion_file)
-
-    # 解析药物特征字符串
-    drug_features_df['Features'] = drug_features_df['Features'].apply(parse_features)
-
-    # 读取蛋白质特征文件，假设格式为：ID, 0, 1, ..., 63
-    protein_features_df = pd.read_csv(protein_fusion_file)
-
-    # 提取特征列 (假设特征列为第2到第65列)
-    protein_features_df['Features'] = protein_features_df.iloc[:, 1:65].values.tolist()
-
-    # 读取交互矩阵
-    interaction_matrix = pd.read_csv(interaction_file, index_col=0)
-
-    # 找到共同的药物和蛋白质
-    common_drugs = set(drug_features_df['ID']).intersection(set(interaction_matrix.index))
-    common_proteins = set(protein_features_df['ID']).intersection(set(interaction_matrix.columns))
-
-    attention_layer = MultiHeadBilinearAttention(input_dim=input_dim, num_heads=num_heads)
-    features_labels = []
-
-    # 遍历共同的药物和蛋白质
-    for drug_id in common_drugs:
-        for protein_id in common_proteins:
-            interaction = interaction_matrix.loc[drug_id, protein_id]
-
-            # 获取药物和蛋白质特征
-            drug_feature = drug_features_df.loc[drug_features_df['ID'] == drug_id, 'Features'].values[0]
-            protein_feature = protein_features_df.loc[protein_features_df['ID'] == protein_id, 'Features'].values[0]
-
-            # 确保特征是二维的
-            drug_feature_tensor = torch.tensor(drug_feature, dtype=torch.float32).unsqueeze(0)  # 增加batch维度
-            protein_feature_tensor = torch.tensor(protein_feature, dtype=torch.float32).unsqueeze(0)
-
-            # 使用注意力层进行融合
-            fused_feature = attention_layer(drug_feature_tensor, protein_feature_tensor).detach().numpy().squeeze()
-
-            # 确保fused_feature是一维的，与药物-蛋白质对标识符连接
-            entry = np.concatenate([[f'{drug_id}-{protein_id}'], fused_feature, [interaction]])
-            features_labels.append(entry)
-
-    # 创建新的DataFrame
-    columns = ['ID'] + [str(i) for i in range(fused_feature.size)] + ['Interaction']
-    features_labels_df = pd.DataFrame(features_labels, columns=columns)
-
-    # 保存结果到文件
-    features_labels_df.to_csv(output_file, index=False)
-    print(f"Fused features saved to '{output_file}'.")
-
-def fuse_channels_AB_features(channelA_file, channelB_file, output_file, input_dim, num_heads=4):
-    """
-    利用多头双线性注意力机制，将通道A和通道B的融合特征进行进一步融合。
-
-    参数:
-        channelA_file: str，通道A融合特征文件路径，格式为(ID, 特征..., Interaction)
-        channelB_file: str，通道B融合特征文件路径，格式同上
-        output_file: str，融合后结果保存路径
-        input_dim: int，单通道特征维度（注意是单通道的）
-        num_heads: int，多头数量
-    """
-    import pandas as pd
-    import torch
-    import numpy as np
-
-    # 读取两个通道的融合特征文件
-    df_A = pd.read_csv(channelA_file)
-    df_B = pd.read_csv(channelB_file)
-
-    # 确保ID列是字符串格式，方便匹配
-    df_A['ID'] = df_A['ID'].astype(str)
-    df_B['ID'] = df_B['ID'].astype(str)
-
-    # 取两个文件中共同的ID（药物-蛋白质对）
-    common_ids = set(df_A['ID']).intersection(set(df_B['ID']))
-
-    # 创建多头双线性注意力层，输入维度是单通道的特征维度
-    attention_layer = MultiHeadBilinearAttention(input_dim=input_dim, num_heads=num_heads)
-
-    fused_features = []
-
-    for id_ in common_ids:
-        # 取通道A特征向量（除ID和Interaction列）
-        feat_A = df_A.loc[df_A['ID'] == id_, df_A.columns.difference(['ID', 'Interaction'])].values[0].astype(np.float32)
-        # 取通道B特征向量
-        feat_B = df_B.loc[df_B['ID'] == id_, df_B.columns.difference(['ID', 'Interaction'])].values[0].astype(np.float32)
-        # 取Interaction标签（假设两个通道标签一致）
-        interaction = df_A.loc[df_A['ID'] == id_, 'Interaction'].values[0]
-
-        # 转tensor并增加batch维度
-        feat_A_tensor = torch.tensor(feat_A).unsqueeze(0)
-        feat_B_tensor = torch.tensor(feat_B).unsqueeze(0)
-
-        # 融合两个通道特征
-        fused_feat = attention_layer(feat_A_tensor, feat_B_tensor).detach().numpy().squeeze()
-
-        # 拼接ID, 特征, Interaction，注意ID是字符串，特征和标签是数值
-        entry = np.concatenate([[id_], fused_feat, [interaction]])
-        fused_features.append(entry)
-
-    # 定义列名
-    columns = ['ID'] + [str(i) for i in range(fused_feat.size)] + ['Interaction']
-
-    # 创建DataFrame并保存
-    fused_df = pd.DataFrame(fused_features, columns=columns)
-    fused_df.to_csv(output_file, index=False)
-
-    print(f"通道A和通道B融合特征保存至: {output_file}")
-
-
 if __name__ == '__main__':
-    # Luo数据集
     # 第一步：药物特征融合
-    fuse_features('GNN/Drug_SMILES_Features_RGCN_Features.csv',
-                  'GNN/Drug_Graph_Features_RGCN_Graph_Features.csv',
-                  'GNN/Drug_Fusion_Features_RGCN.csv',
+    fuse_features('Drug_SMILES_Features_RGCN_Features.csv',
+                  'Drug_Graph_Features_RGCN_Graph_Features.csv',
+                  'Drug_Fusion_Features_RGCN.csv',
                   input_dim=64, num_heads=4)
 
     # 第二步：蛋白质特征融合
-    fuse_features('GNN/Protein_Sequence_Features_RGCN_Features.csv',
-                  'GNN/Protein_Graph_Features_RGCN_Graph_Features.csv',
-                  'GNN/Protein_Fusion_Features_RGCN.csv',
+    fuse_features('Protein_Sequence_Features_RGCN_Features.csv',
+                  'Protein_Graph_Features_RGCN_Graph_Features.csv',
+                  'Protein_Fusion_Features_RGCN.csv',
                   input_dim=64, num_heads=4)
 
     # # 第三步：药物和蛋白质特征融合并添加标签
-    final_feature_fusion('GNN/Drug_Fusion_Features_RGCN.csv',
-                       'GNN/Protein_Fusion_Features_RGCN.csv',
-                       'heterodata/drug_protein.csv',
-                       'GNN/Fusion_features_with_labels_RGCN.csv',
+    final_feature_fusion('Drug_Fusion_Features_RGCN.csv',
+                       'Protein_Fusion_Features_RGCN.csv',
+                       'data/drug_protein.csv',
+                       'Fusion_features_with_labels_RGCN.csv',
                         input_dim=64, num_heads=4
     )
