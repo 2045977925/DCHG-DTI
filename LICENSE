@@ -619,6 +619,11 @@ Program, unless a warranty or assumption of liability accompanies a
 copy of the Program in return for a fee.
 
                      END OF TERMS AND CONDITIONS
+  This work is published under the CC0 1.0 Universal (CC0 1.0) Public Domain Dedication.
+To the extent possible under law, the person who associated CC0 with this work has waived all 
+rights to the work worldwide under copyright law, including all related and neighboring rights.
+You can copy, modify, distribute and perform the work, even for commercial purposes, all 
+without asking permission.
 
             How to Apply These Terms to Your New Programs
 
@@ -672,3 +677,5 @@ may consider it more useful to permit linking proprietary applications with
 the library.  If this is what you want to do, use the GNU Lesser General
 Public License instead of this License.  But first, please read
 <https://www.gnu.org/licenses/why-not-lgpl.html>.
+
+ 
