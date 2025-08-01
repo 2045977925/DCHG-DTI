@@ -23,5 +23,8 @@ Run the GraphLearning.py script to construct the heterogeneous graph neural netw
 Run the FeatureFusion.py script to integrate different features, facilitating subsequent Drug-Target Interaction (DTI) prediction.
 ## *Step 5: DTI Prediction*
 Use the DTIPrediction.py script to apply the fused features for DTI prediction. This step utilizes the features obtained from the previous step to make predictions and generate results. Following these steps in sequence will help ensure successful replication of the results presented in our paper. If you encounter any challenges or require more detailed information during execution, please refer to our code documentation and program instructions for guidance on parameter settings and data preparation.
-# Contact
-For questions or suggestions, please contact [fcy_0613@163.com].
+# Contributors
+- Haoyang Tang, tanghaoyang@xupt.edu.cn
+- Chenyang Fan, fcy_0613@163.com
+- Bo Qin, qinbo123@xupt.edu.cn
+- Xu Zhu, zhuxu2304@163.com
